@@ -23,8 +23,8 @@ class _EditorScreenState extends State<EditorScreen> {
   double strokeWidth = 3.0;
   bool isEraser = false;
   
-  // Onion skin
-  bool onionSkinEnabled = true;
+  // Onion skin - Disabled by default to avoid confusion
+  bool onionSkinEnabled = false;
 
   @override
   void initState() {
@@ -63,9 +63,17 @@ class _EditorScreenState extends State<EditorScreen> {
 
   void _addFrame() {
     setState(() {
+      // Create a completely new frame with empty strokes
       project.frames.insert(currentFrameIndex + 1, Frame(id: DateTime.now().toString()));
       currentFrameIndex++;
     });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Novo quadro vazio criado!'),
+        duration: Duration(milliseconds: 500),
+      ),
+    );
   }
 
   void _deleteFrame() {
@@ -93,6 +101,19 @@ class _EditorScreenState extends State<EditorScreen> {
         strokes: newStrokes,
       ));
       currentFrameIndex++;
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Quadro duplicado!'),
+        duration: Duration(milliseconds: 500),
+      ),
+    );
+  }
+  
+  void _clearFrame() {
+    setState(() {
+      project.frames[currentFrameIndex].strokes.clear();
     });
   }
 
@@ -132,19 +153,32 @@ class _EditorScreenState extends State<EditorScreen> {
       appBar: AppBar(
         title: Text(project.name),
         actions: [
-          IconButton(
-            icon: Icon(onionSkinEnabled ? Icons.layers : Icons.layers_clear),
-            tooltip: 'Onion Skin (Pele de Cebola)',
-            onPressed: () {
-              setState(() {
-                onionSkinEnabled = !onionSkinEnabled;
-              });
-            },
+          // Onion Skin Toggle with Label
+          Row(
+            children: [
+              Text(
+                'Onion Skin', 
+                style: TextStyle(
+                  fontSize: 12, 
+                  color: onionSkinEnabled ? Colors.red : Colors.grey
+                )
+              ),
+              Switch(
+                value: onionSkinEnabled,
+                activeColor: Colors.red,
+                onChanged: (val) {
+                  setState(() {
+                    onionSkinEnabled = val;
+                  });
+                },
+              ),
+            ],
           ),
           IconButton(
             icon: const Icon(Icons.play_arrow),
             onPressed: _togglePlayback,
             color: isPlaying ? Colors.green : null,
+            tooltip: 'Reproduzir Animação',
           ),
         ],
       ),
@@ -212,6 +246,14 @@ class _EditorScreenState extends State<EditorScreen> {
           const SizedBox(width: 8),
           _toolButton(Icons.cleaning_services, isEraser, () => setState(() => isEraser = true)), // Eraser icon
           const SizedBox(width: 16),
+          // Clear Frame Button
+          IconButton(
+            icon: const Icon(Icons.delete_sweep),
+            color: Colors.white,
+            onPressed: _clearFrame,
+            tooltip: 'Limpar Quadro Atual',
+          ),
+          const SizedBox(width: 16),
           // Color picker (simplified)
           Wrap(
             spacing: 8,
@@ -237,12 +279,14 @@ class _EditorScreenState extends State<EditorScreen> {
             }).toList(),
           ),
           const SizedBox(width: 16),
-          Slider(
-            value: strokeWidth,
-            min: 1.0,
-            max: 20.0,
-            activeColor: Colors.red,
-            onChanged: (v) => setState(() => strokeWidth = v),
+          Expanded(
+            child: Slider(
+              value: strokeWidth,
+              min: 1.0,
+              max: 20.0,
+              activeColor: Colors.red,
+              onChanged: (v) => setState(() => strokeWidth = v),
+            ),
           ),
         ],
       ),
@@ -288,11 +332,12 @@ class _EditorScreenState extends State<EditorScreen> {
                       onPressed: _duplicateFrame,
                       tooltip: 'Duplicar Quadro',
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.add_box),
+                    const SizedBox(width: 10),
+                    FloatingActionButton.small(
                       onPressed: _addFrame,
-                      tooltip: 'Novo Quadro',
-                      color: Colors.red,
+                      backgroundColor: Colors.red,
+                      tooltip: 'Novo Quadro Vazio',
+                      child: const Icon(Icons.add, color: Colors.white),
                     ),
                   ],
                 ),
